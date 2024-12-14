@@ -57,7 +57,10 @@ public final class TreeClientView extends BorderPane implements AutoCloseable {
             try{
                 var opened=TreeConnection.connect(targetHost,targetPort,targetType);
                 if(closed.get()){opened.close();return;}
-                connection=opened;
+                synchronized (this) {
+                    if(closed.get()){opened.close();return;}
+                    connection=opened;
+                }
                 ui(()->{selectedType=targetType;busy=false;drawer.draw(null);log("Connected to "+targetType);controls();});
             }catch(Exception error){ui(()->{busy=false;log("Connection error: "+error.getMessage());controls();});}
         });
@@ -85,5 +88,5 @@ public final class TreeClientView extends BorderPane implements AutoCloseable {
         for(Button b:new Button[]{insert,delete,search,draw})b.setDisable(busy||!connected);value.setDisable(busy||!connected);}
     private void ui(Runnable action){if(!closed.get())Platform.runLater(()->{if(!closed.get())action.run();});}
     private void log(String text){messages.appendText(text+"\n");}
-    @Override public void close(){closed.set(true);TreeConnection active=connection;if(active!=null)active.close();io.shutdownNow();}
+    @Override public synchronized void close(){closed.set(true);TreeConnection active=connection;if(active!=null)active.close();io.shutdownNow();}
 }
